@@ -1,0 +1,40 @@
+@charset "utf-8";
+/* CSS Document */
+div.oni_daiko_post
+	{
+	border:1px solid #9FB7D4;
+	margin:0px 0px 10px 0px;
+	padding:0px 0px 10px 0px;
+	}
+div.oni_daiko_post h2
+	{
+	font-size:107%;
+	font-weight:bold;
+	color:#464646;
+	margin:0px 0px 10px 0px;
+	padding:5px 0px 5px 10px;
+	}
+div.oni_daiko_post h3
+	{
+	font-weight:bold;
+	padding:0px 10px 0px 10px;
+	}
+div.oni_daiko_post p
+	{
+	margin:0px 0px 10px 0px;
+	padding:0px 10px 0px 10px;
+	}
+div.oni_daiko_post p.thumbnail
+	{
+	margin:0px 10px 10px 10px;
+	padding:0px 0px 0px 0px;
+	display:block;
+	float:left;
+	}
+div.oni_daiko_post p.blog_name
+	{
+	text-align:right;
+	margin:0px 10px 0px 10px;
+	border-top:1px solid #000;
+	clear:both;
+	}
