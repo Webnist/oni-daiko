@@ -3,13 +3,13 @@
 Plugin Name: Oni Daiko
 Plugin URI: http://plugins.webnist.net/
 Description: Shows a list of the latest posts from each blogs on a multisaite blog.
-Version: 0.5.3
+Version: 0.7.1.0
 Author: Webnist
 Author URI: http://www.webnist.net
 Network: true
 License: GPLv2 or later
 */
-define( 'ONIDAIKO_VERSION', '0.5.3' );
+define( 'ONIDAIKO_VERSION', '0.7.1.0' );
 
 if ( ! defined( 'ONI_DAIKO_DIR' ) )
 	define( 'ONI_DAIKO_DIR', WP_PLUGIN_DIR . '/oni-daiko' );
