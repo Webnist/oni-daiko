@@ -99,7 +99,8 @@ function get_onidaiko_posts( $input ) {
 
 add_action( 'pre_get_posts', 'onidaiko_post' );
 function onidaiko_post( $query ) {
-	if ( ! is_admin() && get_query_var( 'oni-daiko' ) ) {
+	global $current_blog;
+	if ( ! is_admin() && get_query_var( 'oni-daiko' ) && $current_blog->blog_id == 1 ) {
 		//set_query_var( 'posts_per_page', 1 );
 		$query->is_home = false;
 		$query->is_archive = true;
