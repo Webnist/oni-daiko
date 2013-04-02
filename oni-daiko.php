@@ -9,101 +9,166 @@ Author URI: http://www.webnist.net
 Network: true
 License: GPLv2 or later
 */
-define( 'ONIDAIKO_VERSION', '0.7.1.0' );
 
-if ( ! defined( 'ONI_DAIKO_DIR' ) )
+if ( !defined( 'ONI_DAIKO_DIR' ) )
 	define( 'ONI_DAIKO_DIR', WP_PLUGIN_DIR . '/oni-daiko' );
 
-if ( ! defined( 'ONI_DAIKO_URL' ) )
+if ( !defined( 'ONI_DAIKO_URL' ) )
 	define( 'ONI_DAIKO_URL', WP_PLUGIN_URL . '/oni-daiko' );
 
-if ( ! defined( 'ONI_DAIKO_IMG_DIR' ) )
-	define( 'ONI_DAIKO_IMG_DIR', ONI_DAIKO_DIR . '/images' );
+new OniDaiko();
 
-if ( ! defined( 'ONI_DAIKO_IMG_URL' ) )
-	define( 'ONI_DAIKO_IMG_URL', ONI_DAIKO_URL . '/images' );
+class OniDaiko {
 
-load_plugin_textdomain( 'onidaiko', false, '/oni-daiko/languages/' );
+	private $version = '0.7.1.0';
+	private $plugin_dir;
+	private $plugin_url;
+	private $lang_path;
+	private $domain = 'oni-daiko';
+	private $slug = 'oni-daiko';
+	private $current_blog_id;
 
-add_action( 'admin_menu', 'oni_daiko_menu' );
-function oni_daiko_menu() {
-	add_menu_page( __( 'Oni Daiko', 'onidaiko' ), __( 'Oni Daiko', 'onidaiko' ), 'level_10', 'oni-daiko.php', 'oni_daiko_setting_menu', ONI_DAIKO_IMG_URL . '/admin_side.gif' );
-}
+	public function __construct() {
+		$this->plugin_dir = WP_PLUGIN_DIR . '/oni-daiko';
+		$this->plugin_url = WP_PLUGIN_URL . '/oni-daiko';
+		$this->lang_path = $this->plugin_dir . '/languages';
 
-add_filter( 'rewrite_rules_array', 'onidaiko_rewrite_rules' );
-function onidaiko_rewrite_rules( $rules ) {
-	$newrules = array();
-	$newrules['oni-daiko/?$'] = 'index.php?oni-daiko=post';
-	$newrules['oni-daiko-feed/?$'] = 'index.php?oni-daiko=feed';
-	return $newrules + $rules;
-}
+		load_plugin_textdomain( $this->domain, false, $this->lang_path );
+		$this->current_blog_id = get_current_blog_id();
+		$this->slug = get_option( 'oni-daiko-slug' );
+		if ( $this->current_blog_id == 1 ) {
+			register_activation_hook( __FILE__, array( &$this, 'flush_rewrite_rules', 'add_option' ) );
+			register_deactivation_hook( __FILE__, array( &$this, 'flush_rewrite_rules', 'delete_option' ) );
+			register_uninstall_hook( __FILE__, array( &$this, 'flush_rewrite_rules', 'delete_option' ) );
+	
+			add_filter( 'init', array( &$this, 'add_rewrite_rule' ) );
 
-add_filter( 'query_vars', 'onidaiko_query_var' );
-function onidaiko_query_var( $vars ){
-	array_push( $vars, 'oni-daiko' );
-	array_push( $vars, 'oni-daiko-feed' );
-	return $vars;
-}
+			add_filter( 'query_vars',  array( &$this, 'add_query_var' ) );
+			
+			add_filter( 'posts_request', array( &$this, 'add_posts_request' ), 10, 2 );
+			
+			add_action( 'pre_get_posts', array( &$this, 'add_pre_get_posts' ) );
+	
+			//add_action( 'loop_start', array( &$this, 'add_loop_start' ) );
 
-add_filter( 'init', 'onidaiko_flushRules' );
-function onidaiko_flushRules(){
-	global $wp_rewrite;
-	$wp_rewrite->flush_rules();
-}
+			add_action( 'the_post', array( &$this, 'add_the_post' ) );
+			
+			add_action( 'loop_end', array( &$this, 'add_loop_end' ) );
 
-function get_onidaiko_blogs(){
-	global $wpdb;
-	$query = "SELECT * FROM {$wpdb->blogs} WHERE public = '1' ";
-	$set_blog_list = $wpdb->get_results( $query );
-	return $set_blog_list;
-}
+			add_action( 'admin_menu', array( &$this, 'admin_menu' ) );
+		}
+	}
 
-add_filter( 'posts_request', 'get_onidaiko_posts' );
-function get_onidaiko_posts( $input ) {
-	global $current_blog;
-	if ( get_query_var( 'oni-daiko' ) && $current_blog->blog_id == 1 ) {
+	public function flush_rewrite_rules( $hard = true ) {
+		global $wp_rewrite;
+		$wp_rewrite->flush_rules( $hard );
+	}
+
+	public function add_option() {
+		if ( !get_option( 'oni-daiko-slug' ) ) {
+			update_option( 'oni-daiko-slug', 'oni-daiko' );
+		}
+	}
+	
+	public function delete_option() {
+		if ( get_option( 'oni-daiko-slug' ) ) {
+			delete_option( 'oni-daiko-slug' );
+		}
+	}
+
+	public function add_rewrite_rule() {
+	
+		global $wp_rewrite;
+		$wp_rewrite->add_rewrite_tag( '%oni_daiko%', '(oni-daiko)', 'oni-daiko=' );
+		$wp_rewrite->add_permastruct( 'oni_daiko', '/%oni_daiko%/', false );
+
+	}
+
+	public function add_query_var( $vars ){
+		array_push( $vars, 'oni-daiko' );
+		return $vars;
+	}
+
+	public function add_pre_get_posts( $query ) {
+		global $wp_query;
+		if ( !is_admin() && $query->is_main_query() && get_query_var( 'oni-daiko' ) && $this->current_blog_id == 1 ) {
+			$query->is_home = false;
+		}
+	}
+	
+	public function add_posts_request( $sql, $query ) {
 		global $wpdb;
-		$limit = get_query_var( 'posts_per_page' );
-		$where = get_query_var( 'posts_where_request' );
-				/*
-				$where		= apply_filters_ref_array( 'posts_where_request' );
-				$groupby	= apply_filters_ref_array( 'posts_groupby_request' );
-				$join		= apply_filters_ref_array( 'posts_join_request' );
-				$orderby	= apply_filters_ref_array( 'posts_orderby_request' );
-				$distinct	= apply_filters_ref_array( 'posts_distinct_request' );
-				$fields		= apply_filters_ref_array( 'posts_fields_request' );
-				$limits		= apply_filters_ref_array( 'post_limits_request' );
-				*/
-		$set_blog_list = get_onidaiko_blogs();
-		$sql = '';
-		$count = '';
-		$blog_count = count( $set_blog_list );
-		foreach ( $set_blog_list as $blogs ) {
-			$count++;
-			$blog_list = $blogs->blog_id;
-			switch_to_blog( $blogs->blog_id );
-			$sql .= ("SELECT *, $blog_list as blog_id FROM $wpdb->posts WHERE post_type = 'post' AND post_status = 'publish'");
-			if ( $count != $blog_count ) {
-				$sql .= 'UNION' . "\n";
+		if( $query->is_main_query() && $this->current_blog_id == 1 && get_query_var( 'oni-daiko' ) == 'oni-daiko' ) {
+			if ( preg_match('/(SELECT(.*))(FROM)/', $sql, $matches) ) {
+				$select = trim( $matches[1] );
 			}
+			if ( preg_match('/(FROM(.*))(WHERE)/', $sql, $matches) ) {
+				$from = trim( $matches[1] );
+			}
+			if ( preg_match('/(WHERE(.*))(ORDER|GROUP)/', $sql, $matches) ) {
+				$where = trim( $matches[1] );
+				$where = str_replace( 'wp_posts.', '', $where );
+			}
+			if ( preg_match('/(ORDER|GROUP)(.*)/', $sql, $matches) ) {
+				$orderby = trim( $matches[0] );
+				$orderby = str_replace( 'wp_posts.', '', $orderby );
+			}
+			$sql = '';
+			$count = 1;
+			$set_blog_list = $this->get_blog_list();
+			$blog_count = count( $set_blog_list );
+			foreach ( $set_blog_list as $blogs ) {
+				$blog_id = $blogs->blog_id;
+				switch_to_blog( $blog_id );
+				$sql .= ("SELECT *, $blog_id as blog_id FROM $wpdb->posts $where");
+				//$sql .= ("SELECT *, $blog_id as blog_id FROM $wpdb->posts WHERE post_type = 'post' AND post_status = 'publish'");
+				if ( $count != $blog_count ) {
+					$sql .= ' UNION' . "\n";
+				}
+				restore_current_blog();
+				$count++;
+			}
+			$sql = "$sql $orderby";
+		}
+			
+		return $sql;
+	}
+
+	public function get_blog_list(){
+		global $wpdb;
+		$query = "SELECT * FROM {$wpdb->blogs} WHERE public = '1' ";
+		$set_blog_list = $wpdb->get_results( $query );
+		return $set_blog_list;
+	}
+
+	public function add_loop_start( $query ) {
+		if ( !is_admin() && ($query->is_main_query()) && get_query_var( 'oni-daiko' ) ) {
+			$posts = $query->posts;
+			foreach ( $posts as $post ) {
+				switch_to_blog( $post->blog_id );
+			}
+		}
+	}
+	
+	public function add_the_post( $post ) {
+		global $wp_query;
+		if ( !is_admin() && ($wp_query->is_main_query()) && get_query_var( 'oni-daiko' ) ) {
+			restore_current_blog();
+			switch_to_blog( $post->blog_id );
+		}
+	}
+
+	public function add_loop_end( $query ) {
+		if ( !is_admin() && ($query->is_main_query()) && get_query_var( 'oni-daiko' ) ) {
 			restore_current_blog();
 		}
-		$sql .= " ORDER BY post_date DESC LIMIT $limit";
-		$posts = $wpdb->get_results( $sql, OBJECT );
-		//$this->request = " SELECT $found_rows $distinct $fields FROM $wpdb->posts $join WHERE 1=1 $where $groupby $orderby $limits";
-		return $sql;
-	} else {
-		return $input;
 	}
-}
 
-add_action( 'pre_get_posts', 'onidaiko_post' );
-function onidaiko_post( $query ) {
-	global $current_blog;
-	if ( ! is_admin() && get_query_var( 'oni-daiko' ) && $current_blog->blog_id == 1 ) {
-		//set_query_var( 'posts_per_page', 1 );
-		$query->is_home = false;
-		$query->is_archive = true;
-	} elseif ( ! is_admin()  && get_option( 'oni_home' ) == true ) {
+	public function admin_menu() {
+		add_menu_page( __( 'Oni Daiko', $this->domain ), __( 'Oni Daiko', $this->domain ), 'manage_network', __FILE__, $this->setting_menu, $this->plugin_url . '/images/admin_side.gif' );
 	}
-}
+	
+	public function setting_menu() {
+	}
+	
+} // end of class
