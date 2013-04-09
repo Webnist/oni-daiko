@@ -51,12 +51,6 @@ class OniDaiko {
 			
 			add_action( 'pre_get_posts', array( &$this, 'add_pre_get_posts' ) );
 	
-			//add_action( 'loop_start', array( &$this, 'add_loop_start' ) );
-
-			//add_action( 'the_post', array( &$this, 'add_the_post' ) );
-			
-			//add_action( 'loop_end', array( &$this, 'add_loop_end' ) );
-
 			add_action( 'admin_menu', array( &$this, 'admin_menu' ) );
 			add_action( 'admin_init', array( &$this, 'add_general_custom_fields' ) );
 			add_filter( 'admin_init', array( &$this, 'add_custom_whitelist_options_fields' ) );
@@ -149,28 +143,6 @@ class OniDaiko {
 
 		$set_blog_list = $wpdb->get_results( $query );
 		return $set_blog_list;
-	}
-
-	public function add_loop_start( $query ) {
-		if ( !is_admin() && $query->is_main_query() && get_query_var( $this->slug ) ) {
-			$posts = $query->posts;
-			foreach ( $posts as $post ) {
-				switch_to_blog( $post->blog_id );
-			}
-		}
-	}
-	
-	public function add_the_post( $post ) {
-		global $wp_query;
-		if ( !is_admin() && $wp_query->is_main_query() && get_query_var( $this->slug ) ) {
-			switch_to_blog( $post->blog_id );
-		}
-	}
-
-	public function add_loop_end( $query ) {
-		if ( !is_admin() && $query->is_main_query() && get_query_var( $this->slug ) ) {
-			switch_to_blog( 1 );
-		}
 	}
 
 	public function admin_menu() {
