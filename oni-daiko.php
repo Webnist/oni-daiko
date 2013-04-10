@@ -7,7 +7,6 @@ Version: 0.7.1.0
 Author: Webnist
 Author URI: http://www.webnist.net
 License: GPLv2 or later
-Network: true
 */
 
 if ( !defined( 'ONI_DAIKO_DIR' ) )
@@ -16,32 +15,32 @@ if ( !defined( 'ONI_DAIKO_DIR' ) )
 if ( !defined( 'ONI_DAIKO_URL' ) )
 	define( 'ONI_DAIKO_URL', WP_PLUGIN_URL . '/oni-daiko' );
 
-new OniDaiko();
+if ( !class_exists('OniDaikoAdmin') )
+	require_once(dirname(__FILE__).'/includes/class-admin-menu.php');
+
+load_plugin_textdomain(OniDaiko::TEXT_DOMAIN, false, dirname(plugin_basename(__FILE__)) . '/languages/');
 
 class OniDaiko {
+	const TEXT_DOMAIN = 'oni-daiko';
+	const ONIDAIKO_SLUG = 'oni-daiko';
 
-	private $version = '0.7.1.0';
-	private $plugin_dir;
-	private $plugin_url;
-	private $lang_path;
-	private $main_include = 1;
-	private $domain = 'oni-daiko';
-	private $slug = 'oni-daiko';
 	private $current_blog_id;
+	private $plugin_basename;
+	private $plugin_dir_path;
+	private $plugin_dir_url;
 
 	public function __construct() {
-		$this->plugin_dir = WP_PLUGIN_DIR . '/oni-daiko';
-		$this->plugin_url = WP_PLUGIN_URL . '/oni-daiko';
-		$this->lang_path = $this->plugin_dir . '/languages';
-
-		load_plugin_textdomain( $this->domain, false, $this->lang_path );
 		$this->current_blog_id = get_current_blog_id();
+		$this->plugin_basename = self::plugin_basename();
+		$this->plugin_dir_path = self::plugin_dir_path();
+		$this->plugin_dir_url = self::plugin_dir_url();
+
 		$this->main_include = get_option( 'oni-daiko-main-include', 1 );
 		$this->slug = get_option( 'oni-daiko-slug', 'oni-daiko' );
+
 		if ( $this->current_blog_id == 1 ) {
 			register_activation_hook( __FILE__, array( &$this, 'flush_rewrite_rules', 'add_option' ) );
 			register_deactivation_hook( __FILE__, array( &$this, 'flush_rewrite_rules', 'delete_option' ) );
-			register_uninstall_hook( __FILE__, array( &$this, 'flush_rewrite_rules', 'delete_option' ) );
 	
 			add_filter( 'init', array( &$this, 'add_rewrite_rule' ) );
 
@@ -50,12 +49,20 @@ class OniDaiko {
 			add_filter( 'posts_request', array( &$this, 'add_posts_request' ), 10, 2 );
 			
 			add_action( 'pre_get_posts', array( &$this, 'add_pre_get_posts' ) );
-	
-			add_action( 'admin_menu', array( &$this, 'admin_menu' ) );
-			add_action( 'admin_init', array( &$this, 'add_general_custom_fields' ) );
-			add_filter( 'admin_init', array( &$this, 'add_custom_whitelist_options_fields' ) );
-			add_action( 'admin_print_styles', array( &$this, 'admin_styles' ) );
 		}
+		register_uninstall_hook( __FILE__, array( &$this, 'flush_rewrite_rules', 'delete_option' ) );
+	}
+
+	static public function plugin_basename() {
+		return plugin_basename(__FILE__);
+	}
+
+	static public function plugin_dir_path() {
+		return plugin_dir_path( self::plugin_basename() );
+	}
+	
+	static public function plugin_dir_url() {
+		return plugin_dir_url( self::plugin_basename() );
 	}
 
 	public function flush_rewrite_rules( $hard = true ) {
@@ -145,52 +152,8 @@ class OniDaiko {
 		return $set_blog_list;
 	}
 
-	public function admin_menu() {
-		add_menu_page( __( 'Oni Daiko', $this->domain ), __( 'Oni Daiko', $this->domain ), 'manage_network', $this->domain, array( &$this, 'add_admin_edit_page' ), $this->plugin_url . '/admin/images/menu-icon.gif' );
-	}
-	
-	public function add_admin_edit_page() {
-		$title = __( 'Set Oni Daiko', $this->domain ); ?>
-		<div class="wrap">
-		<?php screen_icon(); ?>
-		<h2><?php echo esc_html( $title ); ?></h2>
-		<form method="post" action="options.php">
-		<?php settings_fields( $this->domain ); ?>
-		<?php do_settings_sections( $this->domain ); ?>
-		<input type="hidden" name="refresh">
-		<table class="form-table">
-		<?php do_settings_fields( $this->domain, 'default' ); ?>
-		</table>
-		<?php submit_button(); ?>
-		</form>
-		</div>
-	<?php }
-
-
-	public function add_general_custom_fields() {
-		add_settings_field( 'oni-daiko-main-include', __( 'Main sites include list.', $this->domain ), array( &$this, 'onid_check_box' ), $this->domain, 'default', array( 'name' => 'oni-daiko-main-include', 'value' => $this->main_include, 'note' => 'Enabling' ) );
-		add_settings_field( 'oni-daiko-slug', __( 'Oni Daiko slug setting', $this->domain ), array( &$this, 'onid_text_field' ), $this->domain, 'default', array( 'name' => 'oni-daiko-slug', 'value' => $this->slug ) );
-	}
-
-	public function onid_check_box( $args ) {
-		extract( $args );
-		$output = '<label><input type="checkbox" name="' . $args['name'] .'" id="' . $args['name'] .'" value="1"' . checked( 1, $args['value'], false ). ' />' . esc_html__( $args['note'], $this->domain ) . '</label>' ."\n";
-		echo $output;
-	}
-
-	public function onid_text_field( $args ) {
-		extract( $args );
-		$output = '<label><input type="text" name="' . $args['name'] .'" id="' . $args['name'] .'" value="' . $args['value'] .'" /></label>' ."\n";
-		echo $output;
-	}
-
-	public function add_custom_whitelist_options_fields() {
-		register_setting( $this->domain, 'oni-daiko-main-include', 'intval' );
-		register_setting( $this->domain, 'oni-daiko-slug' );
-	}
-
-	public function admin_styles() {
-		wp_enqueue_style( 'admin-oni-daiko-style', $this->plugin_url . '/admin/css/style.css' );
-	}
-
 } // end of class
+
+new OniDaiko();
+new OniDaikoAdmin();
+
