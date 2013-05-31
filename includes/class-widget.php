@@ -2,8 +2,8 @@
 add_action( 'widgets_init', 'wp_onidaiko_widgets_init', 1 );
 function wp_onidaiko_widgets_init() {
 	register_widget( 'WP_Widget_Onidaiko_Recent_Posts' );
+	register_widget( 'WP_Widget_Onidaiko_Search' );
 }
-$OniDaiko = new OniDaiko();
 class WP_Widget_Onidaiko_Recent_Posts extends WP_Widget {
 
 	function __construct() {
@@ -17,7 +17,7 @@ class WP_Widget_Onidaiko_Recent_Posts extends WP_Widget {
 	}
 
 	function widget($args, $instance) {
-		global $wpdb, $OniDaiko;
+		$OniDaiko = new OniDaiko();
 		$cache = wp_cache_get('widget_oni_daiko_recent_posts', 'widget');
 
 		if ( !is_array($cache) )
@@ -95,4 +95,43 @@ class WP_Widget_Onidaiko_Recent_Posts extends WP_Widget {
 
 <?php
 	}
+}
+
+class WP_Widget_Onidaiko_Search extends WP_Widget {
+
+	function __construct() {
+		$widget_ops = array('classname' => 'widget_oni_daiko_search', 'description' => __( "A search form for your multisite") );
+		parent::__construct('oni-daiko-search', __('Multisite Search'), $widget_ops);
+	}
+
+	function widget( $args, $instance ) {
+		$OniDaiko = new OniDaiko();
+		extract($args);
+		$title = apply_filters( 'widget_title', empty( $instance['title'] ) ? '' : $instance['title'], $instance, $this->id_base );
+
+		echo $before_widget;
+		if ( $title )
+			echo $before_title . $title . $after_title;
+
+		// Use current theme search form if it exists
+		$OniDaiko->get_oni_daiko_search_form();
+
+		echo $after_widget;
+	}
+
+	function form( $instance ) {
+		$instance = wp_parse_args( (array) $instance, array( 'title' => '') );
+		$title = $instance['title'];
+?>
+		<p><label for="<?php echo $this->get_field_id('title'); ?>"><?php _e('Title:'); ?> <input class="widefat" id="<?php echo $this->get_field_id('title'); ?>" name="<?php echo $this->get_field_name('title'); ?>" type="text" value="<?php echo esc_attr($title); ?>" /></label></p>
+<?php
+	}
+
+	function update( $new_instance, $old_instance ) {
+		$instance = $old_instance;
+		$new_instance = wp_parse_args((array) $new_instance, array( 'title' => ''));
+		$instance['title'] = strip_tags($new_instance['title']);
+		return $instance;
+	}
+
 }

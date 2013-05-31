@@ -180,6 +180,28 @@ class OniDaiko {
 		return $set_blog_list;
 	}
 
+	public function get_oni_daiko_search_form($echo = true) {
+		do_action( 'get_oni_daiko_search_form' );
+
+		$search_form_template = locate_template('oni-daiko-searchform.php');
+		if ( '' != $search_form_template ) {
+			require($search_form_template);
+			return;
+		}
+
+		$form = '<form role="search" method="get" id="oni-daiko-searchform" action="' . esc_url( home_url( $this->slug . '/' ) ) . '" >
+		<div><label class="screen-reader-text" for="s">' . __('Multisite Search for:', 'oni-daiko') . '</label>
+		<input type="text" value="' . get_search_query() . '" name="s" id="s" />
+		<input type="submit" id="oni-daiko-searchsubmit" value="'. esc_attr__('Search') .'" />
+		</div>
+		</form>';
+
+		if ( $echo )
+			echo apply_filters('get_oni_daiko_search_form', $form);
+		else
+			return apply_filters('get_oni_daiko_search_form', $form);
+	}
+
 } // end of class
 
 new OniDaiko();
