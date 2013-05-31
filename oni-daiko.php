@@ -18,6 +18,9 @@ if ( !defined( 'ONI_DAIKO_URL' ) )
 if ( !class_exists('OniDaikoAdmin') )
 	require_once(dirname(__FILE__).'/includes/class-admin-menu.php');
 
+if ( !class_exists('OniDaikoWidget') )
+	require_once(dirname(__FILE__).'/includes/class-widget.php');
+
 load_plugin_textdomain(OniDaiko::TEXT_DOMAIN, false, dirname(plugin_basename(__FILE__)) . '/languages/');
 
 class OniDaiko {
@@ -49,6 +52,7 @@ class OniDaiko {
 			add_filter( 'posts_request', array( &$this, 'add_posts_request' ), 10, 2 );
 			
 			add_action( 'pre_get_posts', array( &$this, 'add_pre_get_posts' ) );
+
 		}
 		register_uninstall_hook( __FILE__, array( &$this, 'flush_rewrite_rules', 'delete_option' ) );
 	}
@@ -65,7 +69,7 @@ class OniDaiko {
 		return plugin_dir_url( self::plugin_basename() );
 	}
 
-	public function flush_rewrite_rules( $hard = true ) {
+	public function flush_rewrite_rules( $hard = false ) {
 		global $wp_rewrite;
 		$wp_rewrite->flush_rules( $hard );
 	}
@@ -138,6 +142,30 @@ class OniDaiko {
 		}
 			
 		return $sql;
+	}
+
+	public function get_oni_posts( $number ) {
+		global $wpdb, $wp_query;
+		$number = $number ? $number : 5;
+		$limits = 'LIMIT ' . $number;
+		$blogs = $this->get_blog_list();
+		$sql = '';
+		$count = 1;
+		$set_blog_list = $this->get_blog_list();
+		$blog_count = count( $set_blog_list );
+		foreach ( $set_blog_list as $blogs ) {
+			$blog_id = $blogs->blog_id;
+			switch_to_blog( $blog_id );
+			$sql .= ("SELECT *, $blog_id as blog_id FROM $wpdb->posts WHERE post_type = 'post' AND post_status = 'publish'");
+			if ( $count != $blog_count ) {
+				$sql .= ' UNION' . "\n";
+			}
+			restore_current_blog();
+			$count++;
+		}
+		$sql .= " ORDER BY post_date DESC $limits";
+		$posts = $wpdb->get_results( $sql, OBJECT );
+		return $posts;
 	}
 
 	public function get_blog_list(){

@@ -67,6 +67,17 @@ class OniDaikoAdmin {
 		register_setting( self::OPTION_PAGE, 'oni-daiko-slug' );
 	}
 
+	public function flush_rewrite_rules_slug( $value ) {
+		if ( $value ) {
+			if ( get_option('oni-daiko-slug') === FALSE ) {
+				add_option( 'oni-daiko-slug', $value );
+			}else{
+				update_option( 'oni-daiko-slug', $value );
+			}
+		}
+		return $value;
+	}
+
 	public function admin_styles() {
 		wp_enqueue_style( 'admin-oni-daiko-style', $this->plugin_dir_url . '/admin/css/style.css' );
 	}
