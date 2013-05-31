@@ -53,6 +53,15 @@ class OniDaiko {
 			
 			add_action( 'pre_get_posts', array( &$this, 'add_pre_get_posts' ) );
 
+			remove_filter('do_feed_rdf', 'do_feed_rdf', 10);
+			remove_filter('do_feed_rss', 'do_feed_rss', 10);
+			remove_filter('do_feed_rss2', 'do_feed_rss2', 10);
+			remove_filter('do_feed_atom', 'do_feed_atom', 10);
+			add_action('do_feed_rdf', array( &$this, 'custom_feed_rdf' ), 10, 1);
+			add_action('do_feed_rss', array( &$this, 'custom_feed_rss' ), 10, 1);
+			add_action('do_feed_rss2', array( &$this, 'custom_feed_rss2' ), 10, 1);
+			add_action('do_feed_atom', array( &$this, 'custom_feed_atom' ), 10, 1);
+
 		}
 		register_uninstall_hook( __FILE__, array( &$this, 'flush_rewrite_rules', 'delete_option' ) );
 	}
@@ -200,6 +209,46 @@ class OniDaiko {
 			echo apply_filters('get_oni_daiko_search_form', $form);
 		else
 			return apply_filters('get_oni_daiko_search_form', $form);
+	}
+
+	function custom_feed_rdf() {
+		$template_file = '/feed-rdf.php';
+		if( get_query_var( $this->slug ) && is_feed() ) {
+			$template_file = ONI_DAIKO_DIR . '/template' . $template_file;
+		} else {
+			$template_file = ABSPATH . WPINC . $template_file;
+		}
+		load_template( $template_file );
+	}
+	
+	function custom_feed_rss() {
+		$template_file = '/feed-rss.php';
+		if( get_query_var( $this->slug ) == $this->slug ) {
+			$template_file = ONI_DAIKO_DIR . '/template' . $template_file;
+		} else {
+			$template_file = ABSPATH . WPINC . $template_file;
+		}
+		load_template( $template_file );
+	}
+	
+	function custom_feed_rss2( $for_comments ) {
+		$template_file = '/feed-rss2' . ( $for_comments ? '-comments' : '' ) . '.php';
+		if( get_query_var( $this->slug ) == $this->slug ) {
+			$template_file = ONI_DAIKO_DIR . '/template' . $template_file;
+		} else {
+			$template_file = ABSPATH . WPINC . $template_file;
+		}
+		load_template( $template_file );
+	}
+
+	function custom_feed_atom( $for_comments ) {
+		$template_file = '/feed-atom' . ( $for_comments ? '-comments' : '' ) . '.php';
+		if( get_query_var( $this->slug ) && is_feed() ) {
+			$template_file = ONI_DAIKO_DIR . '/template' . $template_file;
+		} else {
+			$template_file = ABSPATH . WPINC . $template_file;
+		}
+		load_template( $template_file );
 	}
 
 } // end of class
