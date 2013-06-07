@@ -21,9 +21,10 @@ class OniDaikoAdmin {
 			add_action( 'admin_init', array( &$this, 'add_general_custom_fields' ) );
 			add_filter( 'admin_init', array( &$this, 'add_custom_whitelist_options_fields' ) );
 			add_action( 'admin_print_styles', array( &$this, 'admin_styles' ) );
+			if ( isset( $_GET['page'], $_GET['settings-updated'] ) && $_GET['page'] == self::OPTION_PAGE && $_GET['settings-updated'] == 'true' )
+				add_action( 'admin_init', array( $this, 'flush_rules' ) );
 		}
 	}
-
 	public function admin_menu() {
 		add_menu_page( __( 'Oni Daiko', OniDaiko::TEXT_DOMAIN ), __( 'Oni Daiko', OniDaiko::TEXT_DOMAIN ), 'manage_network', self::OPTION_PAGE, array( &$this, 'add_admin_edit_page' ), $this->plugin_dir_url . '/admin/images/menu-icon.gif' );
 	}
@@ -46,6 +47,7 @@ class OniDaikoAdmin {
 	<?php }
 
 	public function add_general_custom_fields() {
+		global $add_settings_field;
 		add_settings_field( 'oni-daiko-main-include', __( 'Main sites include list.', OniDaiko::TEXT_DOMAIN ), array( &$this, 'onid_check_box' ), self::OPTION_PAGE, 'default', array( 'name' => 'oni-daiko-main-include', 'value' => $this->main_include, 'note' => 'Enabling' ) );
 		add_settings_field( 'oni-daiko-slug', __( 'Oni Daiko slug setting', OniDaiko::TEXT_DOMAIN ), array( &$this, 'onid_text_field' ), self::OPTION_PAGE, 'default', array( 'name' => 'oni-daiko-slug', 'value' => $this->slug ) );
 	}
@@ -67,19 +69,13 @@ class OniDaikoAdmin {
 		register_setting( self::OPTION_PAGE, 'oni-daiko-slug' );
 	}
 
-	public function flush_rewrite_rules_slug( $value ) {
-		if ( $value ) {
-			if ( get_option('oni-daiko-slug') === FALSE ) {
-				add_option( 'oni-daiko-slug', $value );
-			}else{
-				update_option( 'oni-daiko-slug', $value );
-			}
-		}
-		return $value;
-	}
-
 	public function admin_styles() {
 		wp_enqueue_style( 'admin-oni-daiko-style', $this->plugin_dir_url . '/admin/css/style.css' );
+	}
+	public function flush_rules() {
+		global $wp_rewrite;
+		check_admin_referer();
+		$wp_rewrite->flush_rules( false );
 	}
 
 }
